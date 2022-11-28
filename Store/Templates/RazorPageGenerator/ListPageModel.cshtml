@@ -1,0 +1,257 @@
+@inherits Microsoft.VisualStudio.Web.CodeGeneration.Templating.RazorTemplateBase
+@using System.Collections.Generic
+@using System.Linq
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Linq.Expressions;
+using LazZiya.TagHelpers.Alerts;
+@{
+    var entitySetName = Model.ModelMetadata.EntitySetName;
+    var primaryKeyName = Model.ModelMetadata.PrimaryKeys[0].PropertyName;
+    var viewDataTypeShortNameLowerCase = Model.ViewDataTypeShortName.ToLowerInvariant();
+    var primaryKeyShortTypeName = Model.ModelMetadata.PrimaryKeys[0].ShortTypeName;
+    var primaryKeyType = Model.ModelMetadata.PrimaryKeys[0].TypeName;
+    var primaryKeyNullableTypeName = GetNullableTypeName(primaryKeyType, primaryKeyShortTypeName);
+    var lambdaVar = Model.ModelVariable[0];
+    var entitySetVar = Model.EntitySetVariable ??
+        (String.IsNullOrEmpty(entitySetName)
+            ? entitySetName
+            : (entitySetName.Substring(0, length: 1).ToLowerInvariant() + entitySetName.Substring(1)));
+    var relatedProperties = new Dictionary<string, dynamic>();
+    foreach (var nav in Model.ModelMetadata.Navigations)
+    {
+        relatedProperties.Add(nav.AssociationPropertyName, nav);
+
+    }
+    var inlineIncludes = "";
+    foreach (var property in relatedProperties.Values)
+    {
+        inlineIncludes += string.Format("{0}                .Include({1} => {1}.{2})", Environment.NewLine, lambdaVar, property.AssociationPropertyName);
+    }
+    foreach (var namespaceName in Model.RequiredNamespaces)
+    {
+       
+    @:using @namespaceName;
+    }
+}
+
+namespace @Model.NamespaceName
+{
+    public class @Model.PageModelClassName : PageModel
+    {
+        private readonly @Model.ContextTypeName _context;
+
+        public @(Model.PageModelClassName)(@Model.ContextTypeName context)
+        {
+            _context = context;
+        }
+        
+        [BindProperty]
+        public IList<@Model.ViewDataTypeShortName> @Model.ViewDataTypeShortName { get;set; } = default!;
+
+        [BindProperty]
+        public @Model.ViewDataTypeShortName @Model.ViewDataTypeShortName@("2") { get; set; } = default!;
+        [BindProperty(SupportsGet = true)]
+        public int P { get; set; } = 1;
+
+        // Page size, number of records to be displayed
+        [BindProperty(SupportsGet = true)]
+        public int S { get; set; } = 10;
+
+        // Total number of records
+        public int TotalRecords { get; set; } = 0;
+
+    public async Task OnGetAsync(string q)
+    {
+    if (_context.@(entitySetName) != null)
+    {
+        @{
+    foreach (var property in relatedProperties.Values)
+    {
+                        @:// to show description column change the last string parameter on this SelectList
+                        @:ViewData["@(property.ForeignKeyPropertyNames[0])"] = new SelectList(_context.@property.EntitySetName, "@property.PrimaryKeyNames[0]", "@property.DisplayPropertyName");
+    }
+     
+                            @:// If the search text is not empty, then apply where clause>
+                            @:// Here is just searching por primary key column because template, that is not useful replace it for some description column or more colums  
+}
+                    
+                var searchExp = new List<Expression<Func<@Model.ViewDataTypeShortName, bool>>>() { };
+                if (!string.IsNullOrWhiteSpace(q))
+                {
+                    ViewData["Q"] = q;
+                    searchExp.Add(x => x.@(primaryKeyName).Contains(q) 
+                        //if error here change or Add more columns to search here like this example
+                        //|| x.Descriptioncolum.Contains(Q)
+                    );
+                }
+               //count records that returns after the search
+                TotalRecords = await _context.Set<@Model.ViewDataTypeShortName>()
+                                            .WhereList(searchExp)
+                                            .CountAsync();
+
+    @Model.ViewDataTypeShortName = await _context.@(entitySetName)
+    .WhereList(searchExp)  
+    @(inlineIncludes)
+     .AsNoTracking()
+     .Skip((P - 1) * S)
+     .Take(S)
+    .ToListAsync();
+    }
+    }
+    public async Task<IActionResult> OnGetAjaxDetailAsync(@primaryKeyNullableTypeName id)
+        {
+            if (id == null || _context.@(entitySetName) == null)
+            {
+                return NotFound();
+            }
+
+             @Model.ViewDataTypeShortName@("2") = await _context.@(entitySetName).FirstOrDefaultAsync(m => m.@primaryKeyName == id);
+            if ( @Model.ViewDataTypeShortName@("2") == null)
+            {
+                return NotFound();
+            }
+
+            return new JsonResult(@Model.ViewDataTypeShortName@("2"));
+        }
+     public async Task<IActionResult> OnPostDeleteAsync(@primaryKeyNullableTypeName @primaryKeyName,string returnurl)
+        {
+            if (@primaryKeyName == null || _context.@(entitySetName) == null)
+            {
+                return NotFound();
+            }
+            var @viewDataTypeShortNameLowerCase = await _context.@(entitySetName).FindAsync(@primaryKeyName);
+
+            if (@viewDataTypeShortNameLowerCase != null)
+            {
+                try{
+                    _context.@(entitySetName).Remove(@viewDataTypeShortNameLowerCase);
+                    await _context.SaveChangesAsync();
+                }
+                catch{
+                    TempData.Danger("It is not posible to delete related data", "MESSAGE !!");
+                }
+           
+                
+            }
+
+            return Redirect(returnurl);
+        }
+         public async Task<IActionResult> OnPostCreateAsync()
+        {
+@{
+        if ("enable".Equals(@Model.NullableEnabled, StringComparison.OrdinalIgnoreCase))
+        {
+                          @:if (!ModelState.IsValid || _context.@(entitySetName) == null || @Model.ViewDataTypeShortName@("2") == null)
+        }
+        else 
+        {
+                          @:if (!ModelState.IsValid)
+        }
+}
+            {
+                return Page();
+            }
+
+            _context.@(entitySetName).Add(@Model.ViewDataTypeShortName@("2"));
+            await _context.SaveChangesAsync();
+
+            return RedirectToPage("./Index");
+        }
+          public async Task<IActionResult> OnPostEditAsync(string returnurl)
+        {
+            if (!ModelState.IsValid)
+            {
+                return Redirect(returnurl);
+            }
+
+            _context.Attach(@(Model.ModelTypeName)@("2")).State = EntityState.Modified;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!@(Model.ModelTypeName)Exists(@Model.ViewDataTypeShortName@("2").@primaryKeyName))
+                {
+                    return NotFound();
+                }
+                else
+                {
+                    throw;
+                }
+            }
+
+            return Redirect(returnurl);
+        }
+
+        private bool @(Model.ModelTypeName)Exists(@primaryKeyShortTypeName id)
+        {
+@{
+        if ("enable".Equals(@Model.NullableEnabled, StringComparison.OrdinalIgnoreCase))
+        {
+                          @:return (_context.@(entitySetName)?.Any(e => e.@primaryKeyName == id)).GetValueOrDefault();
+        }
+        else 
+        {
+                          @:return _context.@(entitySetName).Any(e => e.@primaryKeyName == id);
+        }
+}
+        }
+ }
+
+ //this class will be generated for each entity namespace, delete to remove repetitive code and implement it on a utils.cs file for entire project
+     public static class GenericWhereList
+    {
+        public static IQueryable<T> WhereList<T>(this IQueryable<T> source, List<Expression<Func<T, bool>>> predications)
+            where T : class
+        {
+            if (predications != null)
+            {
+                foreach (var p in predications)
+                {
+                    source = source.Where(p);
+                }
+            }
+
+            return source;
+        }
+    }
+
+
+}
+    @functions
+    {
+        // This function converts the primary key short type name to its nullable equivalent when possible. This is required to make
+        // sure that an HTTP 400 error is thrown when the user tries to access the edit, delete, or details action with null values.
+        string GetNullableTypeName(string typeName, string shortTypeName)
+        {
+            // The exceptions are caught because if for any reason the type is user defined, then the short type name will be used.
+            // In that case the user will receive a server error if null is passed to the edit, delete, or details actions.
+            Type primaryKeyType = null;
+            try
+            {
+                primaryKeyType = Type.GetType(typeName);
+            }
+            catch
+            {
+            }
+            if (primaryKeyType != null && (!Microsoft.VisualStudio.Web.CodeGeneration.Templating.TypeUtilities.IsNullable(primaryKeyType) || IsGuid(typeName)))
+            {
+                return shortTypeName + "?";
+            }
+            return shortTypeName;
+        }
+
+        bool IsGuid(string typeName)
+        {
+            return String.Equals("System.Guid", typeName, StringComparison.OrdinalIgnoreCase);
+        }
+    }

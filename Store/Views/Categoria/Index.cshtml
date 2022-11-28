@@ -1,0 +1,66 @@
+﻿@model Categorium
+
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Categoria with modal raa</h1>
+
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exampleModal" onclick="limpiar()">
+    Create new category
+</button>
+
+
+
+<div class="p-4 rounded border bg-light ">
+    <table id="tblData" class="table table-bordered table-responsive-sm">
+        <thead class="table-dark">
+            <tr class="table-info">
+                <th>idCatgoria</th>
+                <th>Nombre</th>
+                <th>Accciones</th>
+            </tr>
+
+        </thead>
+    </table>
+</div>
+
+
+
+<!-- Modal -->
+<div class="modal fade"  id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="modal-title fs-5" id="exampleModalLabel">Create new Category</h1>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form asp-action="Create">
+
+            <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <input  type="hidden" id="idCategoria" asp-for="IdCatgoria"/>
+                        <div class="form-group">
+                            <label asp-for="Nombre" class="control-label"></label>
+                            <input asp-for="Nombre"  id="nombreCat" class="form-control" />
+                            <span asp-validation-for="Nombre" class="text-danger"></span>
+                        </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-danger" data-bs-dismiss="modal">Close</button>
+                <button type="submit" class="btn btn-outline-success">Guardar</button>
+            </div>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+
+@section Scripts{
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/category.js"></script>
+}
