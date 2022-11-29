@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Store.Models;
 using Store.Models.ViewModel;
+using System.Security.Claims;
 
 namespace Store.Controllers
 {
@@ -20,15 +24,23 @@ namespace Store.Controllers
         // GET: LoginController
         public ActionResult Index()
         {
-            ViewModelLogin login = new ViewModelLogin();
+            //ViewModelLogin login = new();
+
+            ClaimsPrincipal claimUser = HttpContext.User;
+            if (claimUser.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
             return View();
         }
         [HttpPost]
-        public ActionResult Index(ViewModelLogin _login)
+        public async Task<ActionResult> Index(ViewModelLogin _login)
         {
-            //var user = _context.Usuarios();
+            Rol rol = new();
             var status = _context.Usuarios.Where(x => x.Correo == _login.correo && x.Clave == _login.clave).FirstOrDefault();
 
+            rol = _context.Rols.Where(x => x.IdRol == status.IdRol).FirstOrDefault();
+            
             if (status == null)
             {
                 ViewBag.LoginStatus = 0;
@@ -37,9 +49,25 @@ namespace Store.Controllers
             {
                 //ViewBag.LoginStatus = 1;
                 //ViewBag.User = status;
+                List<Claim> claims = new()
+                {
+                    new Claim(ClaimTypes.Name,status.Nombre),
+                    new Claim(ClaimTypes.NameIdentifier,status.Nombre.ToString()),
+                    new Claim(ClaimTypes.Role,rol.Nombre.ToString()),
+                    //new Claim("UrlFoto",usuerio.Foto);
+                };
 
-                
-                 return RedirectToAction("Index", "Usuarios");
+
+                ClaimsIdentity claimsIdentity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
+                AuthenticationProperties properties = new AuthenticationProperties()
+                {
+                    AllowRefresh = true,
+                    IsPersistent = true,
+                };
+                await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(claimsIdentity),
+                    properties);
+
+                return RedirectToAction("Index", "Home");
             }
 
             return View(_login);
